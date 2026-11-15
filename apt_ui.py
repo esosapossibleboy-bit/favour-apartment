@@ -3,7 +3,7 @@ from apt_script import render_apt_script
 
 def render_apartment_app() -> str:
     states_options = "".join(
-        f'<option value="{st}" {"selected" if st == "Lagos" else ""}>{st}</option>'
+        f'<option value="{st}" {"selected" if st == "Edo" else ""}>{st}</option>'
         for st in sorted(NIGERIAN_STATES)
     )
     return f"""<!DOCTYPE html>
@@ -11,7 +11,7 @@ def render_apartment_app() -> str:
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>{APARTMENT_LISTING['title']} — Secure House Inspection</title>
+    <title>{APARTMENT_LISTING['title']} — Benin City, Edo State</title>
     <style>
         * {{ box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }}
         body {{ margin: 0; background: #090d1a; color: #f8fafc; }}
@@ -19,6 +19,8 @@ def render_apartment_app() -> str:
         .wrap {{ max-width: 520px; margin: 0 auto; padding: 16px; }}
         .hero {{ background: linear-gradient(135deg, #312e81, #0f172a); border: 1px solid #4338ca; border-radius: 18px; padding: 18px; margin-bottom: 14px; }}
         .badge {{ display: inline-block; background: rgba(52,211,153,0.15); color: #34d399; border: 1px solid rgba(52,211,153,0.35); padding: 4px 10px; border-radius: 999px; font-size: 0.76rem; font-weight: 700; }}
+        .pill-row {{ display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }}
+        .pill {{ background: rgba(251,191,36,0.14); border: 1px solid rgba(251,191,36,0.35); color: #fde68a; padding: 4px 9px; border-radius: 999px; font-size: 0.75rem; font-weight: 600; }}
         .card {{ background: #111827; border: 1px solid #1f2937; border-radius: 16px; padding: 16px; margin-bottom: 14px; }}
         input, select {{ width: 100%; padding: 11px 12px; margin-top: 8px; border-radius: 10px; border: 1px solid #374151; background: #0b1021; color: #f8fafc; font-size: 0.94rem; }}
         button {{ width: 100%; padding: 12px; margin-top: 12px; border: none; border-radius: 12px; font-weight: 700; font-size: 0.95rem; cursor: pointer; background: linear-gradient(135deg, #f59e0b, #d97706); color: #090d1a; }}
@@ -37,7 +39,7 @@ def render_apartment_app() -> str:
     <div class="bar">
         <div>
             <div style="font-weight:800;font-size:1.1rem;color:#fbbf24;">🏢 {APARTMENT_LISTING['title']}</div>
-            <div style="font-size:0.78rem;color:#cbd5e1;">Verified Tenant Inspection Portal</div>
+            <div style="font-size:0.78rem;color:#cbd5e1;">Benin City, Edo State • Tenant Inspection Portal</div>
         </div>
         <span class="badge">🛡️ ID & Gate PIN Verified</span>
     </div>
@@ -46,10 +48,20 @@ def render_apartment_app() -> str:
         <div class="hero">
             <div style="display:flex;justify-content:space-between;align-items:center;">
                 <span style="font-weight:700;font-size:1.05rem;">📍 {APARTMENT_LISTING['area']}</span>
-                <span style="color:#fbbf24;font-weight:800;">{APARTMENT_LISTING['rent_annual']}</span>
+                <span style="color:#fbbf24;font-weight:800;font-size:0.88rem;">{APARTMENT_LISTING['rent_annual']}</span>
             </div>
-            <p style="font-size:0.84rem;color:#cbd5e1;margin:8px 0 0;line-height:1.5;">
-                🔒 For resident safety, the exact house street address and <strong>4-Digit Gate Security PIN</strong> are unlocked immediately after your booking is confirmed.
+            <div style="font-size:0.85rem;color:#e2e8f0;margin-top:6px;font-weight:600;">
+                🏠 3 Self-Contained Units Available
+            </div>
+            <div class="pill-row">
+                <span class="pill">🛏️ 1 Bedroom</span>
+                <span class="pill">🛋️ Sitting Room</span>
+                <span class="pill">🍳 Kitchen</span>
+                <span class="pill">🚿 Bathroom</span>
+                <span class="pill">🚽 Toilet</span>
+            </div>
+            <p style="font-size:0.82rem;color:#cbd5e1;margin:10px 0 0;line-height:1.5;">
+                🔒 For resident safety, the exact house street address in Benin City and your <strong>4-Digit Gate Security PIN</strong> unlock immediately after booking confirmation.
             </p>
         </div>
 
@@ -61,7 +73,12 @@ def render_apartment_app() -> str:
 
         <div id="secBook" class="card">
             <h3 style="margin-top:0;">Schedule Your Physical Tour</h3>
-            <label style="font-size:0.8rem;color:#94a3b8;">1. Choose Inspection Date & Time Slot</label>
+            <label style="font-size:0.8rem;color:#94a3b8;">1. Choose Self-Contained Unit, Date & Time</label>
+            <select id="unitName" onchange="loadSlots()">
+                <option value="Unit 1 (1-Bed Self-Contain)">Unit 1 — 1-Bed Self-Contain (Room, Sitting Room, Kitchen, Bath & Toilet)</option>
+                <option value="Unit 2 (1-Bed Self-Contain)">Unit 2 — 1-Bed Self-Contain (Room, Sitting Room, Kitchen, Bath & Toilet)</option>
+                <option value="Unit 3 (1-Bed Self-Contain)">Unit 3 — 1-Bed Self-Contain (Room, Sitting Room, Kitchen, Bath & Toilet)</option>
+            </select>
             <input id="visitDate" type="date" onchange="loadSlots()" />
             <select id="visitTime">
                 <option value="10:00 AM">10:00 AM — Morning Tour</option>

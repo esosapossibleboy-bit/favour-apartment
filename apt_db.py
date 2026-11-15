@@ -14,19 +14,24 @@ NIGERIAN_STATES = {
 }
 
 ALLOWED_ID_TYPES = {"NIN Slip", "Driver's License", "Voter's Card", "International Passport"}
+APARTMENT_UNITS = {
+    "Unit 1 (1-Bed Self-Contain)",
+    "Unit 2 (1-Bed Self-Contain)",
+    "Unit 3 (1-Bed Self-Contain)",
+}
 
 APARTMENT_LISTING = {
     "title": os.getenv("APT_TITLE", "Favour Apartment"),
-    "area": os.getenv("APT_AREA", "Lekki Phase 1, Lagos"),
-    "exact_address": os.getenv("APT_EXACT_ADDRESS", "Plot 14 Admiralty Way, Off Freedom Way, Lekki Phase 1, Lagos"),
-    "rent_annual": os.getenv("APT_RENT", "₦3,500,000 / year"),
+    "area": os.getenv("APT_AREA", "Benin City, Edo State"),
+    "features": os.getenv("APT_FEATURES", "3 Units Available • Each: 1 Bedroom, Sitting Room, Kitchen, Toilet & Bathroom"),
+    "exact_address": os.getenv("APT_EXACT_ADDRESS", "Favour Apartment, Benin City, Edo State (Exact Street Unlocked on Confirmation)"),
+    "rent_annual": os.getenv("APT_RENT", "Contact Host for Rent"),
     "host_phone": os.getenv("APT_HOST_PHONE", "0803 000 0000"),
     "host_passcode": os.getenv("APT_HOST_PASSCODE", "246810"),
 }
 
 def verify_host_passcode(passcode: str) -> bool:
-    expected = APARTMENT_LISTING["host_passcode"]
-    return hmac.compare_digest((passcode or "").strip(), expected)
+    return hmac.compare_digest((passcode or "").strip(), APARTMENT_LISTING["host_passcode"])
 
 def get_conn(db_path: str = "apartment_tours.db"):
     conn = sqlite3.connect(db_path)
@@ -35,6 +40,7 @@ def get_conn(db_path: str = "apartment_tours.db"):
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             booking_code TEXT UNIQUE NOT NULL,
             gate_pin TEXT NOT NULL,
+            unit_name TEXT NOT NULL DEFAULT 'Unit 1 (1-Bed Self-Contain)',
             full_name TEXT NOT NULL,
             email TEXT NOT NULL,
             phone TEXT NOT NULL,
@@ -48,7 +54,11 @@ def get_conn(db_path: str = "apartment_tours.db"):
             created_at TEXT NOT NULL
         )
     """)
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_slot ON inspections(visit_date, visit_time, status)")
+    try:
+        conn.execute("ALTER TABLE inspections ADD COLUMN unit_name TEXT NOT NULL DEFAULT 'Unit 1 (1-Bed Self-Contain)'")
+    except Exception:
+        pass
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_slot ON inspections(unit_name, visit_date, visit_time, status)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_guest ON inspections(phone, email)")
     conn.commit()
     return conn
@@ -73,6 +83,7 @@ def book_inspection(
     guests: int,
     visit_date: str,
     visit_time: str,
+    unit_name: str = "Unit 1 (1-Bed Self-Contain)",
 ) -> dict:
     clean_name = full_name.strip()
     if len(clean_name.split()) < 2:
@@ -95,6 +106,9 @@ def book_inspection(
     if id_type not in ALLOWED_ID_TYPES:
         return {"ok": False, "error": "Select a valid government ID you will present at the gate"}
 
+    if unit_name not in APARTMENT_UNITS:
+        return {"ok": False, "error": "Select Unit 1, Unit 2, or Unit 3"}
+
     if guests < 1 or guests > 2:
         return {"ok": False, "error": "For security, a maximum of 2 visitors is allowed per inspection"}
 
@@ -105,11 +119,11 @@ def book_inspection(
         return {"ok": False, "error": "You already have 2 active inspection bookings"}
 
     cur.execute(
-        "SELECT id FROM inspections WHERE visit_date = ? AND visit_time = ? AND status = 'CONFIRMED'",
-        (visit_date.strip(), visit_time.strip()),
+        "SELECT id FROM inspections WHERE unit_name = ? AND visit_date = ? AND visit_time = ? AND status = 'CONFIRMED'",
+        (unit_name, visit_date.strip(), visit_time.strip()),
     )
     if cur.fetchone():
-        return {"ok": False, "error": f"{visit_date} at {visit_time} is already reserved. Choose another slot."}
+        return {"ok": False, "error": f"{unit_name} on {visit_date} at {visit_time} is already reserved."}
 
     code = "FAV-" + secrets.token_hex(3).upper()
     gate_pin = str(1000 + secrets.randbelow(9000))
@@ -117,15 +131,16 @@ def book_inspection(
 
     cur.execute(
         """INSERT INTO inspections
-           (booking_code, gate_pin, full_name, email, phone, visitor_state, visitor_address, id_type, guests, visit_date, visit_time, status, created_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'CONFIRMED', ?)""",
-        (code, gate_pin, clean_name, clean_email, clean_phone, visitor_state, visitor_address.strip(), id_type, guests, visit_date.strip(), visit_time.strip(), ts),
+           (booking_code, gate_pin, unit_name, full_name, email, phone, visitor_state, visitor_address, id_type, guests, visit_date, visit_time, status, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'CONFIRMED', ?)""",
+        (code, gate_pin, unit_name, clean_name, clean_email, clean_phone, visitor_state, visitor_address.strip(), id_type, guests, visit_date.strip(), visit_time.strip(), ts),
     )
     conn.commit()
     return {
         "ok": True,
         "booking_code": code,
         "gate_pin": gate_pin,
+        "unit_name": unit_name,
         "full_name": clean_name,
         "phone": clean_phone,
         "id_type": id_type,
@@ -141,14 +156,14 @@ def lookup_visitor_booking(conn, booking_code: str, phone_or_email: str) -> dict
     norm_phone = normalize_ng_phone(ident) or ident
     cur = conn.cursor()
     cur.execute(
-        """SELECT booking_code, gate_pin, full_name, email, phone, visitor_state, visitor_address, id_type, guests, visit_date, visit_time, status
+        """SELECT booking_code, gate_pin, unit_name, full_name, email, phone, visitor_state, visitor_address, id_type, guests, visit_date, visit_time, status
            FROM inspections WHERE UPPER(booking_code) = ? AND (phone = ? OR LOWER(email) = ?)""",
         (booking_code.strip().upper(), norm_phone, ident),
     )
     row = cur.fetchone()
     if not row:
         return None
-    cols = ["booking_code", "gate_pin", "full_name", "email", "phone", "visitor_state", "visitor_address", "id_type", "guests", "visit_date", "visit_time", "status"]
+    cols = ["booking_code", "gate_pin", "unit_name", "full_name", "email", "phone", "visitor_state", "visitor_address", "id_type", "guests", "visit_date", "visit_time", "status"]
     data = dict(zip(cols, row))
     data["exact_address"] = APARTMENT_LISTING["exact_address"] if data["status"] in ("CONFIRMED", "CHECKED_IN") else "Hidden (Cancelled)"
     data["host_phone"] = APARTMENT_LISTING["host_phone"]
@@ -165,21 +180,21 @@ def cancel_visitor_booking(conn, booking_code: str, phone_or_email: str) -> bool
     conn.commit()
     return cur.rowcount > 0
 
-def get_booked_slots(conn, visit_date: str) -> list[str]:
+def get_booked_slots(conn, visit_date: str, unit_name: str = "Unit 1 (1-Bed Self-Contain)") -> list[str]:
     cur = conn.cursor()
     cur.execute(
-        "SELECT visit_time FROM inspections WHERE visit_date = ? AND status IN ('CONFIRMED', 'CHECKED_IN')",
-        (visit_date.strip(),),
+        "SELECT visit_time FROM inspections WHERE unit_name = ? AND visit_date = ? AND status IN ('CONFIRMED', 'CHECKED_IN')",
+        (unit_name, visit_date.strip()),
     )
     return [r[0] for r in cur.fetchall()]
 
 def host_list_inspections(conn) -> list[dict]:
     cur = conn.cursor()
     cur.execute(
-        """SELECT booking_code, gate_pin, full_name, email, phone, visitor_state, visitor_address, id_type, guests, visit_date, visit_time, status
+        """SELECT booking_code, gate_pin, unit_name, full_name, email, phone, visitor_state, visitor_address, id_type, guests, visit_date, visit_time, status
            FROM inspections ORDER BY id DESC LIMIT 50"""
     )
-    cols = ["booking_code", "gate_pin", "full_name", "email", "phone", "visitor_state", "visitor_address", "id_type", "guests", "visit_date", "visit_time", "status"]
+    cols = ["booking_code", "gate_pin", "unit_name", "full_name", "email", "phone", "visitor_state", "visitor_address", "id_type", "guests", "visit_date", "visit_time", "status"]
     return [dict(zip(cols, row)) for row in cur.fetchall()]
 
 def host_checkin_visitor(conn, booking_code: str) -> bool:

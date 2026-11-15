@@ -18,7 +18,7 @@ def render_apt_script() -> str:
 
         async function loadSlots() {{
             if (!visitDate.value) return;
-            const res = await fetch("/api/slots?visit_date=" + encodeURIComponent(visitDate.value));
+            const res = await fetch("/api/slots?visit_date=" + encodeURIComponent(visitDate.value) + "&unit_name=" + encodeURIComponent(unitName.value));
             const data = await res.json();
             const taken = new Set(data.booked || []);
             for (const opt of visitTime.options) {{
@@ -32,7 +32,7 @@ def render_apt_script() -> str:
             return `
                 <div style="font-weight:800;color:#4ade80;font-size:1.05rem;">✅ CONFIRMED INSPECTION PASS</div>
                 <div style="margin-top:8px;font-size:0.9rem;line-height:1.6;">
-                    <div><strong>Property:</strong> {APARTMENT_LISTING['title']}</div>
+                    <div><strong>Property:</strong> {APARTMENT_LISTING['title']} — ${{d.unit_name}}</div>
                     <div><strong>Booking Code:</strong> <span style="color:#fbbf24;font-weight:800;">${{d.booking_code}}</span></div>
                     <div><strong>Gate Security PIN:</strong> <span style="background:#14532d;padding:2px 8px;border-radius:6px;color:#fef08a;font-weight:800;">${{d.gate_pin}}</span></div>
                     <div><strong>Visitor:</strong> ${{d.full_name}} (${{d.guests}} guest(s))</div>
@@ -50,6 +50,7 @@ def render_apt_script() -> str:
         async function submitBooking() {{
             bookErr.textContent = ""; gatePassCard.style.display = "none";
             const payload = {{
+                unit_name: unitName.value,
                 full_name: fullName.value, email: email.value, phone: phone.value,
                 visitor_state: visitorState.value, visitor_address: visitorAddress.value,
                 id_type: idType.value, guests: parseInt(guests.value),
@@ -101,9 +102,10 @@ def render_apt_script() -> str:
                         <strong style="color:#fbbf24;">${{v.booking_code}} • PIN: ${{v.gate_pin}}</strong>
                         <span style="color:${{v.status==='CHECKED_IN'?'#34d399':(v.status==='CANCELLED'?'#fb7185':'#93c5fd')}};font-weight:700;">${{v.status}}</span>
                     </div>
+                    <div style="color:#fde68a;font-weight:600;">🏠 ${{v.unit_name}}</div>
                     <div><strong>${{v.full_name}}</strong> (${{v.guests}} guest(s))</div>
                     <div>📞 ${{v.phone}} | ✉️ ${{v.email}}</div>
-                    <div>🪪 ID: ${{v.id_type}} | 🏠 ${{v.visitor_address}}, ${{v.visitor_state}}</div>
+                    <div>🪪 ID: ${{v.id_type}} | 📍 ${{v.visitor_address}}, ${{v.visitor_state}}</div>
                     <div>📅 ${{v.visit_date}} at ${{v.visit_time}}</div>
                     ${{v.status === "CONFIRMED" ? `<button style="padding:8px;margin-top:8px;" onclick="checkInVisitor('${{v.booking_code}}')">✅ Check In at Gate</button>` : ""}}
                 </div>

@@ -14,7 +14,7 @@ from apt_db import (
 )
 from apt_ui import render_apartment_app
 
-app = FastAPI(title="Favour Apartment — Secure Inspection Portal")
+app = FastAPI(title="Favour Apartment Benin City — Secure Inspection Portal")
 DB_PATH = "apartment_tours.db"
 IP_HISTORY: dict[str, list[float]] = {}
 
@@ -27,6 +27,7 @@ def _check_rate_limit(ip: str, limit: int = 8, window: float = 60.0):
     IP_HISTORY[ip] = recent
 
 class BookingReq(BaseModel):
+    unit_name: str = Field(default="Unit 1 (1-Bed Self-Contain)", min_length=4, max_length=50)
     full_name: str = Field(min_length=4, max_length=80)
     email: str = Field(min_length=5, max_length=100)
     phone: str = Field(min_length=10, max_length=20)
@@ -53,11 +54,11 @@ def home():
     return render_apartment_app()
 
 @app.get("/api/slots")
-def api_slots(visit_date: str):
+def api_slots(visit_date: str, unit_name: str = "Unit 1 (1-Bed Self-Contain)"):
     conn = get_conn(DB_PATH)
-    booked = get_booked_slots(conn, visit_date)
+    booked = get_booked_slots(conn, visit_date, unit_name)
     conn.close()
-    return {"visit_date": visit_date, "booked": booked}
+    return {"visit_date": visit_date, "unit_name": unit_name, "booked": booked}
 
 @app.post("/api/book")
 def api_book(req: BookingReq, request: Request):
@@ -75,6 +76,7 @@ def api_book(req: BookingReq, request: Request):
         req.guests,
         req.visit_date,
         req.visit_time,
+        req.unit_name,
     )
     conn.close()
     if not res["ok"]:
