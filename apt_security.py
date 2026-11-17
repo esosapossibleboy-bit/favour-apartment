@@ -27,7 +27,7 @@ FAKE_NUMBERS = {"00000000000", "11111111111", "22222222222", "12345678901", "012
 APARTMENT_LISTING = {
     "title": os.getenv("APT_TITLE", "Favour Apartment"),
     "area": os.getenv("APT_AREA", "Benin City, Edo State"),
-    "exact_address": os.getenv("APT_EXACT_ADDRESS", "Favour Apartment, Benin City, Edo State (Exact Street Unlocked on Confirmation)"),
+    "exact_address": os.getenv("APT_EXACT_ADDRESS", "Favour Apartment, Off Agbor Road, Benin City, Edo State"),
     "rent_annual": os.getenv("APT_RENT", "₦200,000 / year"),
     "host_phone": os.getenv("APT_HOST_PHONE", "+2348060317852"),
     "host_passcode": os.getenv("APT_HOST_PASSCODE", "246810"),
