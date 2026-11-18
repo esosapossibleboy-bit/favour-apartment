@@ -12,11 +12,14 @@ def render_apartment_app() -> str:
 {render_apt_head(APARTMENT_LISTING['title'])}
 <body>
     <div class="bar">
-        <div>
-            <div style="font-weight:800;font-size:1.1rem;color:#fbbf24;">🏢 {APARTMENT_LISTING['title']}</div>
-            <div style="font-size:0.78rem;color:#cbd5e1;">Benin City, Edo State • Tenant Inspection Portal</div>
+        <div class="brand-row">
+            <img src="/esosatech-logo.jpg" alt="ESOSATECH Logo" class="brand-logo" />
+            <div>
+                <div style="font-weight:800;font-size:1.05rem;color:#fbbf24;">{APARTMENT_LISTING['title']}</div>
+                <div style="font-size:0.74rem;color:#cbd5e1;">Benin City, Edo State • Powered by ESOSATECH</div>
+            </div>
         </div>
-        <span class="badge">🛡️ BVN/NIN & AI Guarded</span>
+        <span class="badge">🛡️ NIN/BVN Guarded</span>
     </div>
 
     <div class="wrap">
@@ -119,6 +122,11 @@ def render_apartment_app() -> str:
             <div id="hostList"></div>
             <h4 style="margin:14px 0 6px;color:#fbbf24;">📜 Security Audit Trail</h4>
             <div id="auditList"></div>
+        </div>
+
+        <div class="footer-brand">
+            <img src="/esosatech-logo.jpg" alt="ESOSATECH" style="width:24px;height:24px;border-radius:6px;object-fit:cover;" />
+            <span>Built & Secured by <strong>ESOSATECH • SMART MINDS</strong></span>
         </div>
     </div>
     {render_apt_script()}

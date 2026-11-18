@@ -1,6 +1,7 @@
+import os
 import time
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import HTMLResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, Response
 from pydantic import BaseModel, Field
 from apt_ai_cache import SLOT_CACHE, ask_tenant_ai
 from apt_db import (
@@ -18,7 +19,7 @@ from apt_db import (
 from apt_notifications import build_appointment_pdf, dispatch_booking_alerts
 from apt_ui import render_apartment_app
 
-app = FastAPI(title="Favour Apartment Benin City — Secure Inspection Portal", docs_url=None, redoc_url=None)
+app = FastAPI(title="Favour Apartment Benin City — Powered by ESOSATECH", docs_url=None, redoc_url=None)
 DB_PATH = "apartment_tours.db"
 IP_HISTORY: dict[str, list[float]] = {}
 
@@ -76,6 +77,13 @@ class AskAIReq(BaseModel):
 @app.get("/", response_class=HTMLResponse)
 def home():
     return render_apartment_app()
+
+@app.get("/esosatech-logo.jpg")
+def serve_esosatech_logo():
+    for candidate in ("esosatech_logo.jpg", "esosatech_logo.jpeg", "esosatech_logo.png"):
+        if os.path.exists(candidate):
+            return FileResponse(candidate)
+    raise HTTPException(status_code=404, detail="Logo file not found")
 
 @app.get("/api/slots")
 def api_slots(visit_date: str, unit_name: str = "Unit 1 (1-Bed Self-Contain)"):
