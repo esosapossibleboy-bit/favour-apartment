@@ -4,8 +4,8 @@ from apt_pass_js import render_pass_js
 def render_apt_script() -> str:
     return f"""
     <script>
-        const tomorrow = new Date(Date.now() + 86400000).toISOString().split("T")[0];
-        const maxDate = new Date(Date.now() + 30 * 86400000).toISOString().split("T")[0];
+        const tomorrow = new Date(Date.now() + 86400000).toISOString().split("T");
+        const maxDate = new Date(Date.now() + 30 * 86400000).toISOString().split("T");
         visitDate.min = tomorrow;
         visitDate.max = maxDate;
         visitDate.value = tomorrow;
@@ -16,6 +16,18 @@ def render_apt_script() -> str:
             mathB = Math.floor(Math.random() * 8) + 1;
             mathPrompt.textContent = `Human Security Check: What is ${{mathA}} + ${{mathB}}?`;
             mathAnswer.value = "";
+        }}
+
+        function formatApiError(d, fallback) {{
+            if (!d || !d.detail) return fallback;
+            if (typeof d.detail === "string") return d.detail;
+            if (Array.isArray(d.detail)) {{
+                return d.detail.map(e => {{
+                    const field = (e.loc || []).slice(-1);
+                    return field ? `${{field}}: ${{e.msg}}` : e.msg;
+                }}).join(" | ");
+            }}
+            return fallback;
         }}
 
         function showTab(name) {{
@@ -47,8 +59,8 @@ def render_apt_script() -> str:
             bookErr.textContent = ""; gatePassCard.style.display = "none";
             const payload = {{
                 unit_name: unitName.value,
-                full_name: fullName.value, email: email.value, phone: phone.value,
-                visitor_state: visitorState.value, visitor_address: visitorAddress.value,
+                full_name: fullName.value.trim(), email: email.value.trim(), phone: phone.value.trim(),
+                visitor_state: visitorState.value, visitor_address: visitorAddress.value.trim(),
                 id_type: idType.value, id_number: idNumber.value.trim(), guests: parseInt(guests.value),
                 visit_date: visitDate.value, visit_time: visitTime.value,
                 website_url: websiteUrl.value, math_a: mathA, math_b: mathB, math_answer: parseInt(mathAnswer.value || "0")
@@ -59,7 +71,7 @@ def render_apt_script() -> str:
             }});
             const d = await res.json();
             refreshMathChallenge();
-            if (!res.ok) return bookErr.textContent = d.detail || "Booking failed";
+            if (!res.ok) return bookErr.textContent = formatApiError(d, "Booking failed");
             idNumber.value = "";
             renderPassSafe(gatePassCard, d, false);
             loadSlots();
@@ -69,17 +81,17 @@ def render_apt_script() -> str:
             lookupMsg.textContent = ""; foundPassBox.style.display = "none";
             const res = await fetch("/api/pass", {{
                 method: "POST", headers: {{ "Content-Type": "application/json" }},
-                body: JSON.stringify({{ booking_code: lookupCode.value, phone_or_email: lookupContact.value }})
+                body: JSON.stringify({{ booking_code: lookupCode.value.trim(), phone_or_email: lookupContact.value.trim() }})
             }});
             const d = await res.json();
-            if (!res.ok) return lookupMsg.textContent = d.detail || "Booking not found";
+            if (!res.ok) return lookupMsg.textContent = formatApiError(d, "Booking not found");
             renderPassSafe(foundPassBox, d, true);
         }}
 
         async function cancelPass(code) {{
             const res = await fetch("/api/cancel", {{
                 method: "POST", headers: {{ "Content-Type": "application/json" }},
-                body: JSON.stringify({{ booking_code: code, phone_or_email: lookupContact.value }})
+                body: JSON.stringify({{ booking_code: code, phone_or_email: lookupContact.value.trim() }})
             }});
             if (res.ok) {{ foundPassBox.style.display = "none"; lookupMsg.className = "ok"; lookupMsg.textContent = "✅ Inspection cancelled."; loadSlots(); }}
         }}
@@ -88,10 +100,10 @@ def render_apt_script() -> str:
             aiErr.textContent = ""; aiReplyBox.style.display = "none";
             const res = await fetch("/api/ask-ai", {{
                 method: "POST", headers: {{ "Content-Type": "application/json" }},
-                body: JSON.stringify({{ question: aiQuestion.value }})
+                body: JSON.stringify({{ question: aiQuestion.value.trim() }})
             }});
             const d = await res.json();
-            if (!res.ok) return aiErr.textContent = d.detail || "Unable to answer right now";
+            if (!res.ok) return aiErr.textContent = formatApiError(d, "Unable to answer right now");
             aiReplyBox.textContent = d.answer;
             aiReplyBox.style.display = "block";
         }}
@@ -103,7 +115,7 @@ def render_apt_script() -> str:
                 body: JSON.stringify({{ passcode: hostPasscode.value }})
             }});
             const d = await res.json();
-            if (!res.ok) return hostMsg.textContent = d.detail || "Access denied";
+            if (!res.ok) return hostMsg.textContent = formatApiError(d, "Access denied");
             if (!d.inspections.length) hostMsg.textContent = "No inspections scheduled yet.";
             for (const v of d.inspections) {{
                 const card = Object.assign(document.createElement("div"), {{ className: "host-item" }});
