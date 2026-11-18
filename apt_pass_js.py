@@ -1,15 +1,19 @@
 def render_pass_js(apt_title: str) -> str:
     return f"""
         function sharePassWhatsApp(d) {{
-            const text = `🏢 *{apt_title} — Inspection Pass*\\n` +
-                `• *Booking Code:* ${{d.booking_code}}\\n` +
-                `• *Gate PIN:* ${{d.gate_pin}}\\n` +
-                `• *Unit:* ${{d.unit_name}}\\n` +
-                `• *Visitor:* ${{d.full_name}}\\n` +
-                `• *Verified ID:* ${{d.id_type}}\\n` +
-                `• *Date & Time:* ${{d.visit_date}} at ${{d.visit_time}}\\n` +
-                `• *Address:* ${{d.exact_address}}`;
-            window.open("https://wa.me" + encodeURIComponent(text), "_blank");
+            const lines = [
+                "🏢 *" + {apt_title!r} + " — Inspection Pass*",
+                "• *Booking Code:* " + d.booking_code,
+                "• *Gate PIN:* " + d.gate_pin,
+                "• *Unit:* " + d.unit_name,
+                "• *Visitor:* " + d.full_name,
+                "• *Verified ID:* " + d.id_type,
+                "• *Date & Time:* " + d.visit_date + " at " + d.visit_time,
+                "• *Address:* " + d.exact_address
+            ];
+            const waUrl = new URL("https://wa.me");
+            waUrl.searchParams.set("text", lines.join("\\n"));
+            window.open(waUrl.toString(), "_blank", "noopener,noreferrer");
         }}
 
         async function downloadPassPDF(code, contact) {{
