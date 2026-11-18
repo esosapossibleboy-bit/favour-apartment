@@ -1,28 +1,51 @@
 def render_pass_js(apt_title: str) -> str:
     return f"""
-        function sharePassWhatsApp(d) {{
-            const lines = [
-                "🏢 *" + {apt_title!r} + " — Inspection Pass*",
-                "• *Booking Code:* " + d.booking_code,
-                "• *Gate PIN:* " + d.gate_pin,
-                "• *Unit:* " + d.unit_name,
-                "• *Visitor:* " + d.full_name,
-                "• *Verified ID:* " + d.id_type,
-                "• *Date & Time:* " + d.visit_date + " at " + d.visit_time,
-                "• *Address:* " + d.exact_address
-            ];
-            const waUrl = new URL("https://wa.me");
-            waUrl.searchParams.set("text", lines.join("\\n"));
-            window.open(waUrl.toString(), "_blank", "noopener,noreferrer");
-        }}
-
-        async function downloadPassPDF(code, contact) {{
+        async function fetchPassPdfBlob(code, contact) {{
             const res = await fetch("/api/pass/pdf", {{
                 method: "POST", headers: {{ "Content-Type": "application/json" }},
                 body: JSON.stringify({{ booking_code: code, phone_or_email: contact }})
             }});
-            if (!res.ok) return alert("Could not download PDF right now.");
-            const blob = await res.blob();
+            if (!res.ok) return null;
+            return await res.blob();
+        }}
+
+        async function sharePassWhatsApp(d) {{
+            const blob = await fetchPassPdfBlob(d.booking_code, d.phone);
+            if (!blob) return alert("Could not generate PDF pass right now.");
+
+            const filename = `${{d.booking_code}}_Pass.pdf`;
+            const pdfFile = new File([blob], filename, {{ type: "application/pdf" }});
+
+            // 1. Mobile browsers (Android/iOS): attach the actual PDF file directly to WhatsApp!
+            if (navigator.canShare && navigator.canShare({{ files: [pdfFile] }})) {{
+                try {{
+                    await navigator.share({{
+                        files: [pdfFile],
+                        title: {apt_title!r} + " Inspection Pass",
+                        text: `Official Inspection Pass (${{d.booking_code}}) — Gate PIN: ${{d.gate_pin}}`
+                    }});
+                    return;
+                }} catch (err) {{
+                    if (err && err.name === "AbortError") return;
+                }}
+            }}
+
+            // 2. Desktop fallback: download the PDF file & open WhatsApp Web ready to attach
+            const url = URL.createObjectURL(blob);
+            const a = Object.assign(document.createElement("a"), {{ href: url, download: filename }});
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+
+            const waUrl = new URL("https://wa.me");
+            waUrl.searchParams.set("text", `🏢 *${{{apt_title!r}}} Inspection Pass (${{d.booking_code}})* — Please see my attached PDF pass (${{filename}}).`);
+            window.open(waUrl.toString(), "_blank", "noopener,noreferrer");
+        }}
+
+        async function downloadPassPDF(code, contact) {{
+            const blob = await fetchPassPdfBlob(code, contact);
+            if (!blob) return alert("Could not download PDF right now.");
             const url = URL.createObjectURL(blob);
             const a = Object.assign(document.createElement("a"), {{ href: url, download: `${{code}}_Pass.pdf` }});
             document.body.appendChild(a);
@@ -41,6 +64,7 @@ def render_pass_js(apt_title: str) -> str:
                 `Booking Code: ${{d.booking_code}}`,
                 `Gate Security PIN: ${{d.gate_pin}}`,
                 `Visitor: ${{d.full_name}} (${{d.guests}} guest(s))`,
+                `Email & Phone: ${{d.email}} | ${{d.phone}}`,
                 `Verified ID: ${{d.id_type}}`,
                 `Date & Time: ${{d.visit_date}} at ${{d.visit_time}}`,
                 `Exact House Address: ${{d.exact_address}}`,
@@ -50,7 +74,7 @@ def render_pass_js(apt_title: str) -> str:
                 body.appendChild(Object.assign(document.createElement("div"), {{ textContent: line }}));
             }}
             const pdfBtn = Object.assign(document.createElement("button"), {{ className: "btn-dark", textContent: "📄 Download Appointment PDF", onclick: () => downloadPassPDF(d.booking_code, d.phone) }});
-            const waBtn = Object.assign(document.createElement("button"), {{ className: "btn-wa", textContent: "📲 Save / Share Pass on WhatsApp", onclick: () => sharePassWhatsApp(d) }});
+            const waBtn = Object.assign(document.createElement("button"), {{ className: "btn-wa", textContent: "📲 Share PDF Pass on WhatsApp", onclick: () => sharePassWhatsApp(d) }});
             targetBox.append(head, alertNote, body, pdfBtn, waBtn);
             if (allowCancel && d.status === "CONFIRMED") {{
                 targetBox.appendChild(Object.assign(document.createElement("button"), {{ className: "btn-danger", textContent: "❌ Cancel This Inspection", onclick: () => cancelPass(d.booking_code) }}));

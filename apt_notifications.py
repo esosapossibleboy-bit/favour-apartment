@@ -119,6 +119,8 @@ def build_appointment_pdf(booking: dict) -> bytes:
         f"Gate Security PIN: {booking['gate_pin']}",
         f"Selected Unit: {booking['unit_name']}",
         f"Visitor Name: {booking['full_name']} ({booking['guests']} guest(s))",
+        f"Visitor Email: {booking.get('email', 'N/A')}",
+        f"Visitor Phone: {booking.get('phone', 'N/A')}",
         f"Verified ID: {booking['id_type']}",
         f"Appointment: {booking['visit_date']} at {booking['visit_time']}",
         f"House Address: {booking['exact_address']}",
