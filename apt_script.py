@@ -123,7 +123,8 @@ def render_apt_script() -> str:
                     `${{v.booking_code}} • PIN: ${{v.gate_pin}} [${{v.status}}]`,
                     `Unit: ${{v.unit_name}}`,
                     `Visitor: ${{v.full_name}} (${{v.guests}} guest(s))`,
-                    `Contact: ${{v.phone}} | ${{v.email}}`,
+                    `Visitor Phone: ${{v.phone}}`,
+                    `Visitor Email: ${{v.email}}`,
                     `Verified ID: ${{v.id_type}}`,
                     `Home Address: ${{v.visitor_address}}, ${{v.visitor_state}}`,
                     `Schedule: ${{v.visit_date}} at ${{v.visit_time}}`

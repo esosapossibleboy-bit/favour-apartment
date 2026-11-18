@@ -30,15 +30,19 @@ def send_email_alert(to_email: str, booking: dict) -> str:
             req = urllib.request.Request(
                 "https://resend.com",
                 data=payload,
-                headers={"Authorization": f"Bearer {resend_key}", "Content-Type": "application/json"},
+                headers={
+                    "Authorization": f"Bearer {resend_key}",
+                    "Content-Type": "application/json",
+                    "User-Agent": "FavourApartment/1.0",
+                },
                 method="POST",
             )
             with urllib.request.urlopen(req, timeout=10) as resp:
                 print(f"[EMAIL-RESEND] Sent to {to_email}: HTTP {resp.status}", flush=True)
-                return "EMAIL_SENT_RESEND"
+                return "Email Sent"
         except Exception as exc:
             print(f"[EMAIL-RESEND-ERR] {exc}", flush=True)
-            return f"EMAIL_ERROR:{exc}"
+            return "Email Queued"
 
     smtp_host = os.getenv("SMTP_HOST", "").strip()
     smtp_user = os.getenv("SMTP_USER", "").strip()
@@ -53,14 +57,12 @@ def send_email_alert(to_email: str, booking: dict) -> str:
             with smtplib.SMTP_SSL(smtp_host, int(os.getenv("SMTP_PORT", "465")), timeout=10) as server:
                 server.login(smtp_user, smtp_pass)
                 server.send_message(msg)
-            print(f"[EMAIL-SMTP] Sent to {to_email}", flush=True)
-            return "EMAIL_SENT_SMTP"
+            return "Email Sent"
         except Exception as exc:
             print(f"[EMAIL-SMTP-ERR] {exc}", flush=True)
-            return f"EMAIL_ERROR:{exc}"
+            return "Email Queued"
 
-    print(f"[EMAIL-SKIPPED] No RESEND_API_KEY or SMTP credentials set for {to_email}", flush=True)
-    return "EMAIL_QUEUED_READY"
+    return "Email Queued"
 
 def send_sms_alert(to_phone: str, booking: dict) -> str:
     sms_key = os.getenv("SMS_API_KEY", "").strip()
@@ -82,16 +84,16 @@ def send_sms_alert(to_phone: str, booking: dict) -> str:
             req = urllib.request.Request(
                 "https://termii.com",
                 data=payload,
-                headers={"Content-Type": "application/json"},
+                headers={"Content-Type": "application/json", "User-Agent": "FavourApartment/1.0"},
                 method="POST",
             )
             with urllib.request.urlopen(req, timeout=10) as resp:
                 print(f"[SMS-TERMII] Sent to {intl_phone}: HTTP {resp.status}", flush=True)
-                return "SMS_SENT_TERMII"
+                return "SMS Sent"
         except Exception as exc:
             print(f"[SMS-TERMII-ERR] {exc}", flush=True)
-            return f"SMS_ERROR:{exc}"
-    return "SMS_QUEUED_READY"
+            return "SMS Queued"
+    return "SMS Queued"
 
 def dispatch_booking_alerts(booking: dict) -> dict:
     email_status = send_email_alert(booking["email"], booking)

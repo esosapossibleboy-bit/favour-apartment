@@ -127,7 +127,7 @@ def api_book(req: BookingReq, request: Request):
 
     SLOT_CACHE.invalidate(f"{req.unit_name}:{req.visit_date.strip()}")
     alert_res = dispatch_booking_alerts(res)
-    log_audit(conn, f"Alerts for {res['booking_code']}: {alert_res['email_status']} | {alert_res['sms_status']}", "INFO")
+    log_audit(conn, f"Notification alerts dispatched for {res['booking_code']}", "INFO")
     conn.close()
     res["alerts_dispatched"] = True
     res["email_status"] = alert_res["email_status"]

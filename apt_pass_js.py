@@ -55,8 +55,8 @@ def render_pass_js(apt_title: str) -> str:
         function renderPassSafe(targetBox, d, allowCancel = false) {{
             targetBox.replaceChildren();
             const head = Object.assign(document.createElement("div"), {{ textContent: "✅ CONFIRMED INSPECTION PASS", style: "font-weight:800;color:#4ade80;font-size:1.05rem;" }});
-            const statusText = d.email_status ? ` (${{d.email_status}})` : "";
-            const alertNote = Object.assign(document.createElement("div"), {{ textContent: `📩 Email & 📱 SMS alerts processed for ${{d.email}} & ${{d.phone}}${{statusText}}`, style: "font-size:0.8rem;color:#fde68a;margin-top:4px;" }});
+            const emailAlert = Object.assign(document.createElement("div"), {{ textContent: `📩 Email Alert: ${{d.email}}`, style: "font-size:0.8rem;color:#fde68a;margin-top:4px;" }});
+            const smsAlert = Object.assign(document.createElement("div"), {{ textContent: `📱 Phone Alert: ${{d.phone}}`, style: "font-size:0.8rem;color:#fde68a;margin-top:2px;" }});
             const body = Object.assign(document.createElement("div"), {{ style: "margin-top:8px;font-size:0.9rem;line-height:1.6;" }});
             const lines = [
                 `Property: {apt_title} — ${{d.unit_name}}`,
@@ -75,7 +75,7 @@ def render_pass_js(apt_title: str) -> str:
             }}
             const pdfBtn = Object.assign(document.createElement("button"), {{ className: "btn-dark", textContent: "📄 Download Appointment PDF", onclick: () => downloadPassPDF(d.booking_code, d.phone) }});
             const waBtn = Object.assign(document.createElement("button"), {{ className: "btn-wa", textContent: "📲 Share PDF Pass on WhatsApp", onclick: () => sharePassWhatsApp(d) }});
-            targetBox.append(head, alertNote, body, pdfBtn, waBtn);
+            targetBox.append(head, emailAlert, smsAlert, body, pdfBtn, waBtn);
             if (allowCancel && d.status === "CONFIRMED") {{
                 targetBox.appendChild(Object.assign(document.createElement("button"), {{ className: "btn-danger", textContent: "❌ Cancel This Inspection", onclick: () => cancelPass(d.booking_code) }}));
             }}
