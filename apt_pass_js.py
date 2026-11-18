@@ -16,7 +16,6 @@ def render_pass_js(apt_title: str) -> str:
             const filename = `${{d.booking_code}}_Pass.pdf`;
             const pdfFile = new File([blob], filename, {{ type: "application/pdf" }});
 
-            // 1. Mobile browsers (Android/iOS): attach the actual PDF file directly to WhatsApp!
             if (navigator.canShare && navigator.canShare({{ files: [pdfFile] }})) {{
                 try {{
                     await navigator.share({{
@@ -30,7 +29,6 @@ def render_pass_js(apt_title: str) -> str:
                 }}
             }}
 
-            // 2. Desktop fallback: download the PDF file & open WhatsApp Web ready to attach
             const url = URL.createObjectURL(blob);
             const a = Object.assign(document.createElement("a"), {{ href: url, download: filename }});
             document.body.appendChild(a);
@@ -57,14 +55,16 @@ def render_pass_js(apt_title: str) -> str:
         function renderPassSafe(targetBox, d, allowCancel = false) {{
             targetBox.replaceChildren();
             const head = Object.assign(document.createElement("div"), {{ textContent: "✅ CONFIRMED INSPECTION PASS", style: "font-weight:800;color:#4ade80;font-size:1.05rem;" }});
-            const alertNote = Object.assign(document.createElement("div"), {{ textContent: `📩 Email & 📱 SMS alerts dispatched to ${{d.email}} & ${{d.phone}}`, style: "font-size:0.8rem;color:#fde68a;margin-top:4px;" }});
+            const statusText = d.email_status ? ` (${{d.email_status}})` : "";
+            const alertNote = Object.assign(document.createElement("div"), {{ textContent: `📩 Email & 📱 SMS alerts processed for ${{d.email}} & ${{d.phone}}${{statusText}}`, style: "font-size:0.8rem;color:#fde68a;margin-top:4px;" }});
             const body = Object.assign(document.createElement("div"), {{ style: "margin-top:8px;font-size:0.9rem;line-height:1.6;" }});
             const lines = [
                 `Property: {apt_title} — ${{d.unit_name}}`,
                 `Booking Code: ${{d.booking_code}}`,
                 `Gate Security PIN: ${{d.gate_pin}}`,
                 `Visitor: ${{d.full_name}} (${{d.guests}} guest(s))`,
-                `Email & Phone: ${{d.email}} | ${{d.phone}}`,
+                `Visitor Email: ${{d.email}}`,
+                `Visitor Phone: ${{d.phone}}`,
                 `Verified ID: ${{d.id_type}}`,
                 `Date & Time: ${{d.visit_date}} at ${{d.visit_time}}`,
                 `Exact House Address: ${{d.exact_address}}`,

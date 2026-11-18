@@ -1,5 +1,5 @@
 import time
-from fastapi import BackgroundTasks, FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, Response
 from pydantic import BaseModel, Field
 from apt_ai_cache import SLOT_CACHE, ask_tenant_ai
@@ -91,7 +91,7 @@ def api_slots(visit_date: str, unit_name: str = "Unit 1 (1-Bed Self-Contain)"):
     return {"visit_date": visit_date, "unit_name": unit_name, "booked": booked, "cached": False}
 
 @app.post("/api/book")
-def api_book(req: BookingReq, request: Request, bg: BackgroundTasks):
+def api_book(req: BookingReq, request: Request):
     ip = request.client.host if request.client else "unknown"
     _check_rate_limit(ip, "book", limit=6)
     conn = get_conn(DB_PATH)
@@ -117,11 +117,13 @@ def api_book(req: BookingReq, request: Request, bg: BackgroundTasks):
         conn.close()
         raise HTTPException(status_code=400, detail=res["error"])
 
-    log_audit(conn, f"Queued Email & SMS alerts for {res['booking_code']} ({res['phone']})", "INFO")
-    conn.close()
     SLOT_CACHE.invalidate(f"{req.unit_name}:{req.visit_date.strip()}")
-    bg.add_task(dispatch_booking_alerts, res)
+    alert_res = dispatch_booking_alerts(res)
+    log_audit(conn, f"Alerts for {res['booking_code']}: {alert_res['email_status']} | {alert_res['sms_status']}", "INFO")
+    conn.close()
     res["alerts_dispatched"] = True
+    res["email_status"] = alert_res["email_status"]
+    res["sms_status"] = alert_res["sms_status"]
     return res
 
 @app.post("/api/pass")
